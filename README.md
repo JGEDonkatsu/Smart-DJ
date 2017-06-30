@@ -1,1 +1,2 @@
-# Smart-DJ
+# 스마트 DJ
+Developing From DGU
