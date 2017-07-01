@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 from PyQt4 import QtGui, QtCore
 from UI import Ui_MainWindow
+from CaptureNUpload import CapNUp 
 
 class Video():
     def __init__(self,capture):
@@ -33,17 +34,20 @@ class Video():
             
  
 class Gui(QtGui.QMainWindow):
+    video01 = Video(cv2.VideoCapture(0))
+    video02 = Video(cv2.VideoCapture(1))
+
+    vThreadVideo01 = cv2.VideoCapture(0)
+    vThreadVideo02 = cv2.VideoCapture(1)
+
     def __init__(self,parent=None):
         QtGui.QWidget.__init__(self,parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.video01 = Video(cv2.VideoCapture(0))
-        self.video02 = Video(cv2.VideoCapture(1))
         self._timer = QtCore.QTimer(self)
         self._timer.timeout.connect(self.play)
         self._timer.start(27)
         self.update()
- 
     def play(self):
         try:
             self.video01.captureNextFrame()
@@ -54,14 +58,19 @@ class Gui(QtGui.QMainWindow):
             self.video02.captureNextFrame()
             self.ui.Cam02.setPixmap(
                 self.video02.convertFrame())
-            self.ui.Cam02.setScaledContents(True)            
+            self.ui.Cam02.setScaledContents(True)
+            
         except TypeError:
-            print "No frame"
+            pass
  
 def main():
     app = QtGui.QApplication(sys.argv)
     ex = Gui()
     ex.show()
+    # Threading Start
+    vThread01 = CapNUp(Gui.vThreadVideo01)
+    vThread01.start()
+    # Threading End
     sys.exit(app.exec_())
  
 if __name__ == '__main__':
