@@ -6,6 +6,7 @@ Created on 2017. 5. 12.
 import cv2
 import boto3
 import threading
+import os
 from botocore.client import Config
 
 
@@ -60,7 +61,11 @@ class CapNUp(threading.Thread):
     # Drawing Rectangle on Detected Image
     def UploadToS3(self, img, rects):
         self.fileNum = self.fileNum + 1
-        cv2.imwrite('Img/{0}.jpg'.format(self.fileNum),img)
-        data = open('Img/{0}.jpg'.format(self.fileNum),'rb')
-        self.S3.put_object(ACL = 'public-read', Bucket = 'rainbow01', Key = str(self.fileNum)+'.jpg', Body = data)
+        path = str('uploader/{0}.jpg'.format(self.fileNum))
+        cv2.imwrite('uploader/{0}.jpg'.format(self.fileNum),img)
+        data = open('uploader/{0}.jpg'.format(self.fileNum),'rb')
+        self.S3.put_object(ACL = 'public-read', Bucket = 'amor01', Key = str(self.fileNum)+'.jpg', Body = data)
+        data.close()
+        os.remove(path)
+
             
