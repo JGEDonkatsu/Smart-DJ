@@ -1,9 +1,10 @@
 import sys
-import cv2
+import cv2, time
 import numpy as np
 from PyQt4 import QtGui, QtCore
 from UI import Ui_MainWindow
-from CaptureNUpload import CapNUp 
+from CaptureNUpload import CapNUp
+from CaptureNUpload import CapNUp2 
 
 class Video():
     def __init__(self,capture):
@@ -69,9 +70,13 @@ def main():
     ex.show()
     # Threading Start
     vThread01 = CapNUp(Gui.vThreadVideo01)
+    vThread02 = CapNUp2(Gui.vThreadVideo02)
     vThread01.start()
+    time.sleep(1)
+    vThread02.start()
     # Threading End
     sys.exit(app.exec_())
+    
  
 if __name__ == '__main__':
     main()
