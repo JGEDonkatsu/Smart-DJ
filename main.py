@@ -1,10 +1,16 @@
+'''
+Created on 2017. 7. 7.
+
+@author: DJ
+'''
 import sys
-import cv2, time
+import cv2
 import numpy as np
+
 from PyQt4 import QtGui, QtCore
 from UI import Ui_MainWindow
-from CaptureNUpload import CapNUp
-from CaptureNUpload import CapNUp2 
+
+
 
 class Video():
     def __init__(self,capture):
@@ -12,15 +18,13 @@ class Video():
         self.currentFrame=np.array([])
  
     def captureNextFrame(self):
-        """                           
-        capture frame and reverse RBG BGR and return opencv image                                      
-        """
+        """     capture frame and reverse RBG BGR and return opencv image     """
         ret, readFrame=self.capture.read()
         if(ret==True):
             self.currentFrame=cv2.cvtColor(readFrame,cv2.COLOR_BGR2RGB)
  
     def convertFrame(self):
-        """     converts frame to format suitable for QtGui            """
+        """     converts frame to format suitable for QtGui     """
         try:
             height,width=self.currentFrame.shape[:2]
             img=QtGui.QImage(self.currentFrame,
@@ -36,10 +40,8 @@ class Video():
  
 class Gui(QtGui.QMainWindow):
     video01 = Video(cv2.VideoCapture(0))
-    video02 = Video(cv2.VideoCapture(1))
+    #video02 = Video(cv2.VideoCapture(1))
 
-    vThreadVideo01 = cv2.VideoCapture(0)
-    vThreadVideo02 = cv2.VideoCapture(1)
 
     def __init__(self,parent=None):
         QtGui.QWidget.__init__(self,parent)
@@ -48,35 +50,34 @@ class Gui(QtGui.QMainWindow):
         self._timer = QtCore.QTimer(self)
         self._timer.timeout.connect(self.play)
         self._timer.start(27)
+                
         self.update()
+        
     def play(self):
         try:
             self.video01.captureNextFrame()
             self.ui.Cam01.setPixmap(
                 self.video01.convertFrame())
             self.ui.Cam01.setScaledContents(True)
-            
-            self.video02.captureNextFrame()
-            self.ui.Cam02.setPixmap(
-                self.video02.convertFrame())
-            self.ui.Cam02.setScaledContents(True)
-            
+
         except TypeError:
             pass
- 
+
+    def closeEvent(self, event):
+        Ui_MainWindow.vThread01.stop()
+       # Ui_MainWindow.vThread02.stop()
+        self.QuitCV()
+
+    def QuitCV(self):
+        cv2.destroyAllWindows()
+        Ui_MainWindow.vThreadVideo01.release()
+        QtCore.QCoreApplication.quit()
+    
 def main():
     app = QtGui.QApplication(sys.argv)
     ex = Gui()
     ex.show()
-    # Threading Start
-    vThread01 = CapNUp(Gui.vThreadVideo01)
-    vThread02 = CapNUp2(Gui.vThreadVideo02)
-    vThread01.start()
-    time.sleep(1)
-    vThread02.start()
-    # Threading End
     sys.exit(app.exec_())
     
- 
 if __name__ == '__main__':
     main()
