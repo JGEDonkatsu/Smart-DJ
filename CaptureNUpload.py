@@ -2,25 +2,38 @@
 Created on 2017. 5. 12.
 @author: DJ, SJ
 '''
-
+# coding=cp949
 import cv2
 import boto3
-import threading, time
-import os
+import os, time
 from botocore.client import Config
+from PyQt4.QtCore import QThread
+from common import clock, draw_str
 
-vmutex = threading.Lock()
-gFileNum = 0
-class CapNUp(threading.Thread):
+class CapNUp(QThread):
+    tFlag = False
+    cCounter = 0
+    mCounter = 1
+    counter = 0 #upload
+    fileNum = 0
     def __init__(self, video):
-        threading.Thread.__init__(self)
-        self.lock = vmutex
+        QThread.__init__(self)
         self.S3 = boto3.client('s3', config = Config(signature_version = 's3v4'))
+       # self.Rekog = boto3.client('rekognition')
         self.video = video
+        self.now = time.localtime()
+        self.today = str(self.now.tm_year)+"."+str(self.now.tm_mon)+"."+str(self.now.tm_mday)
+
+    def __del__(self):
+        self.wait()
+    
+    def stop(self):
+        print("END")
+        self.tFlag = True
 
     def run(self):
         import sys, getopt
-        args, video_src = getopt.getopt(sys.argv[0:], '', ['cascade=', 'nested-cascade='])
+        args, video_src = getopt.getopt(sys.argv[1:], '', ['cascade=', 'nested-cascade='])
         try:
             video_src = video_src[0]
         except:
@@ -38,29 +51,42 @@ class CapNUp(threading.Thread):
         face_cascade.load('/usr/local/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml')
         
         # Loop
-        while(True):
-            # Capture Frame
-            print("First thread is now sleeping")
-            time.sleep(2)
-            self.lock.acquire()
+        while(self.tFlag == False):
+            if(self.cCounter == 5):
+                self.cCounter = 0
+                if self.counter != 0:
+                    self.UploadToS3()
+                break
             try:
-                print("First thread is acquired a lock")
-            finally:                
+                # Capture Frame 
                 ret, img = cap.read()
-                rects = self.Dectection(img, cascade)
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                gray = cv2.equalizeHist(gray)
+                
+                t = clock()
+                rects = self.Dectection(gray, cascade)
                 vis = img.copy()
+                self.draw_rects(vis, rects, (0, 255, 0))
                 if not nested.empty():
                     for x1, y1, x2, y2 in rects:
-                        roi = img[y1:y2, x1:x2]
+                        roi = gray[y1:y2, x1:x2]
                         vis_roi = vis[y1:y2, x1:x2]
-                        subrects = self.Dectection(roi.copy(), nested)
-                        self.UploadToS3(vis_roi, subrects)
-                    
-                print("First thread is released a lock")
-                self.lock.release()
-                
-    # Detection Function
+                        self.fileNum += 1
+                        self.counter += 1
+                        cv2.imwrite('uploader/{0}.jpg'.format(self.fileNum),vis_roi)
+                        print "OK"
+                        #self.UploadToS3(vis_roi)
+                        
+                dt = clock() - t
+                draw_str(vis, (20, 20), 'time: %.1f ms' % (dt*1000))
+
+            except:
+                pass
+            self.cCounter = self.cCounter + 1
+            print "cCounter: ",self.cCounter
+            time.sleep(1)
         
+    # Detection Function    
     def Dectection(self, img, cascade):
         rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=4, minSize=(30, 30), flags=cv2.CASCADE_SCALE_IMAGE)                                     
         if len(rects) == 0:
@@ -68,90 +94,26 @@ class CapNUp(threading.Thread):
         rects[:,2:] += rects[:,:2]
             
         return rects
-            
-    # Drawing Rectangle on Detected Image
-    def UploadToS3(self, img, rects):
-        global gFileNum
-        gFileNum += 1
-        path = str('uploader/{0}.jpg'.format(gFileNum))
-        cv2.imwrite('uploader/{0}.jpg'.format(gFileNum),img)
-        data = open('uploader/{0}.jpg'.format(gFileNum),'rb')
-        self.S3.put_object(ACL = 'public-read', Bucket = 'amor01', Key = str(gFileNum)+'.jpg', Body = data)
-        data.close()
-        os.remove(path)
-
-
-
-class CapNUp2(threading.Thread):
-    def __init__(self, video):
-        threading.Thread.__init__(self)
-        self.lock = vmutex
-        self.S3 = boto3.client('s3', config = Config(signature_version = 's3v4'))
-        self.video = video
-
-    def run(self):
-        import sys, getopt
-        args, video_src = getopt.getopt(sys.argv[1:], '', ['cascade=', 'nested-cascade='])
-        try:
-            video_src = video_src[1]
-        except:
-            video_src = 0
-        args = dict(args)
-        cascade_fn = args.get('--cascade', "data/haarcascades/haarcascade_frontalface_alt.xml")
-        nested_fn  = args.get('--nested-cascade', "data/haarcascades/haarcascade_eye.xml")
     
-        cascade = cv2.CascadeClassifier(cascade_fn)
-        nested = cv2.CascadeClassifier(nested_fn)
-            
-        cap = self.video
-
-        face_cascade = cv2.CascadeClassifier()
-        face_cascade.load('/usr/local/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml')
-        
-        # Loop
-        while(True):
-            # Capture Frame
-            print("Second thread is now sleeping")
-            time.sleep(2)
-            self.lock.acquire()
-            try:
-                print("Second thread is acquired a lock")
-            finally:
-                ret, img = cap.read()
-                rects = self.Dectection(img, cascade)
-                vis = img.copy()
-                if not nested.empty():
-                    for x1, y1, x2, y2 in rects:
-                        roi = img[y1:y2, x1:x2]
-                        vis_roi = vis[y1:y2, x1:x2]
-                        subrects = self.Dectection(roi.copy(), nested)
-                        self.UploadToS3(vis_roi, subrects)
-                
-                print("Second thread is released a lock")
-                self.lock.release()
-
-                
-    # Detection Function
-        
-    def Dectection(self, img, cascade):
-        rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=4, minSize=(30, 30), flags=cv2.CASCADE_SCALE_IMAGE)                                     
-        if len(rects) == 0:
-            return []
-        rects[:,2:] += rects[:,:2]
-            
-        return rects
-            
     # Drawing Rectangle on Detected Image
-    def UploadToS3(self, img, rects):
-        global gFileNum
-        gFileNum += 1
-        path = str('uploader/{0}.jpg'.format(gFileNum))
-        cv2.imwrite('uploader/{0}.jpg'.format(gFileNum),img)
-        data = open('uploader/{0}.jpg'.format(gFileNum),'rb')
-        self.S3.put_object(ACL = 'public-read', Bucket = 'amor01', Key = str(gFileNum)+'.jpg', Body = data)
-        data.close()
-        os.remove(path)
-
-
-
+    def draw_rects(self, img, rects, color):
+        for x1, y1, x2, y2 in rects:
+            cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
     
+
+    def UploadToS3(self):
+        Num = self.fileNum - self.counter
+        print("UPLOADING...")
+        for i in range(Num, self.fileNum):
+         #   path = str('uploader/{0}.jpg'.format(self.fileNum))
+            data = open('uploader/{0}.jpg'.format(i+1),'rb')
+            self.S3.put_object(ACL = 'public-read', Bucket = 'dgutest01', Key = '오늘'+'/'+str(i+1)+'.jpg', Body = data)
+            
+            print "file counter :", i+1
+            data.close()
+            #os.remove(path)
+         #  if (self.fileNum == self.cLimit):
+          #          self.mCounter = self.mCounter + 1
+        self.counter = 0
+        
+        
