@@ -1,0 +1,33 @@
+¹ü   ·Ê
+
+(10)New  Age
+(112)Club
+(116)Ballad
+(121)Punk Rock
+(123)A Cappella
+(13)Pop
+(131)Indie
+(14)R&B
+(145)Anime
+(147)Synthpop
+(15)Rap
+(16)Reggae
+(17)Rock
+(20)Alternative
+(24)Soundtrack
+(27)Trip-Hop
+(28)Vocal
+(3)Dance
+(31)Trance
+(32)Classical
+(35)House
+(36)Game
+(4)Disco
+(42)Soul
+(5)Funk
+(52)Electronic
+(7)Hip-Hop
+(8)Jazz
+(80)Folk
+(83)Swing
+(98)Easy Listening
