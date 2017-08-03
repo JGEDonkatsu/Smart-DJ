@@ -11,7 +11,7 @@ from PyQt4 import phonon
 from PyQt4.phonon import Phonon
 from CaptureNUpload import CapNUp
 from CaptureNUpload2 import CapNUp2
-from weather import Weather
+from Weather import WeatherAPI
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -32,7 +32,7 @@ class Ui_MainWindow(QtGui.QMainWindow):
     vThread01 = CapNUp(vThreadVideo01, fName)
     vThread02 = CapNUp2(vThreadVideo02, fName)
     
-    wThread = Weather()
+    wThread = WeatherAPI()
     
     def __init__(self):
         super(QtGui.QMainWindow, self).__init__()
@@ -124,9 +124,10 @@ class Ui_MainWindow(QtGui.QMainWindow):
         self.vThread01 = CapNUp(self.vThreadVideo01, self.fName) # Insert Music Name In Thread
         self.vThread02 = CapNUp2(self.vThreadVideo02, self.fName)
         print "fname : ",unicode(self.fName)
+        self.wThread.run()
         self.vThread01.start()
         self.vThread02.start()
-        self.wThread = Weather()
+        
         
         
       

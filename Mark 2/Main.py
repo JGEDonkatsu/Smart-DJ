@@ -69,7 +69,6 @@ class Gui(QtGui.QMainWindow):
     def closeEvent(self, event):
         Ui_MainWindow.vThread01.stop()
         Ui_MainWindow.vThread02.stop()
-        Ui_MainWindow.wThread.stop()
         self.Quit()
 
     def Quit(self):

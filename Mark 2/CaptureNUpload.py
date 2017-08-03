@@ -88,8 +88,7 @@ class CapNUp(QThread):
             except:
                 pass
             self.cCounter = self.cCounter + 1
-            print "cCounter: ",self.cCounter
-            #time.sleep(1)
+            print "Cam01 cCounter: ",self.cCounter
         
     # Detection Function    
     def Dectection(self, img, cascade):
@@ -97,23 +96,27 @@ class CapNUp(QThread):
         if len(rects) == 0:
             return []
         rects[:,2:] += rects[:,:2]
-            
         return rects
     
-
     def UploadToS3(self):
         Num = self.fileNum - self.counter
         print("UPLOADING...")
         for i in range(Num, self.fileNum):
-            #path = str('uploader/{0}.jpg'.format(i+1))
             data = open('uploader/{0}.jpg'.format(i+1),'rb')
             self.S3.put_object(ACL = 'public-read', Bucket = 'dgutest01', Key = self.today+'/'+self.fileName+'/'+str(i+1)+'.jpg', Body = data)
             
-            print "file counter :", i+1
+            print "Cam01 file counter :", i+1
             data.close()
-           # os.remove(path)
         wData = open('uploader/Weather.xls','rb')
         self.S3.put_object(ACL = 'public-read', Bucket = 'dgutest01', Key = self.today+'/'+self.fileName+'/'+'Weather.xls', Body = wData)
+        wData.close()
         self.counter = 0
+        print "Cam01 uploading end"
+        self.Deletion(Num, self.fileNum)
+    
+    def Deletion(self, start, end):
+        for i in range(start, end):
+            path = str('uploader/{0}.jpg'.format(i+1))
+            os.remove(path)
         
         
