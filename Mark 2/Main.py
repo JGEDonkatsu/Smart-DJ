@@ -9,7 +9,6 @@ import numpy as np
 
 from PyQt4 import QtGui, QtCore
 from UI import Ui_MainWindow
-from weather import Weather
 
 
 class Video():
@@ -40,14 +39,12 @@ class Video():
  
 class Gui(QtGui.QMainWindow):
     video01 = Video(cv2.VideoCapture(0))
-    #video02 = Video(cv2.VideoCapture(1))
-    wInfo = Weather()
-
+    video02 = Video(cv2.VideoCapture(1))
+    
     def __init__(self,parent=None):
         QtGui.QWidget.__init__(self,parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.wInfo.WeatherAPI()
         self._timer = QtCore.QTimer(self)
         self._timer.timeout.connect(self.play)
         self._timer.start(27)
@@ -60,29 +57,34 @@ class Gui(QtGui.QMainWindow):
             self.ui.Cam01.setPixmap(
                 self.video01.convertFrame())
             self.ui.Cam01.setScaledContents(True)
+            
+            self.video02.captureNextFrame()
+            self.ui.Cam02.setPixmap(
+                self.video02.convertFrame())
+            self.ui.Cam02.setScaledContents(True)
 
         except TypeError:
             pass
 
     def closeEvent(self, event):
         Ui_MainWindow.vThread01.stop()
-        self.wInfo.WeatherAPI().stop()
-       # Ui_MainWindow.vThread02.stop()
-        #Ui_MainWindow.wThread.stop()
+        Ui_MainWindow.vThread02.stop()
+        Ui_MainWindow.wThread.stop()
         self.Quit()
 
     def Quit(self):
         cv2.destroyAllWindows()
         Ui_MainWindow.vThreadVideo01.release()
-       # Ui_MainWindow.wThread.release()
+        Ui_MainWindow.vThreadVideo02.release()
         QtCore.QCoreApplication.quit()
     
 def main():
     app = QtGui.QApplication(sys.argv)
     ex = Gui()
     ex.show()
+
     sys.exit(app.exec_())
-    #wThread.WeatherAPI().destroy()
+
     
 if __name__ == '__main__':
     main()
