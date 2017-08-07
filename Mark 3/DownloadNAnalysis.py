@@ -10,18 +10,20 @@ import xlwt
 import os, time
 
 from botocore.client import Config
-from PyQt4.Qt import ws
+from PyQt4.QtCore import QThread
 
-class DownNAnalyze:
+class DownNAnalyze(QThread):
+    tFlag = False
     
-    def __init__(self):
+    def __init__(self, aBucket, mName):
+        QThread.__init__(self)
         self.S3 = boto3.client('s3', config = Config(signature_version = 's3v4'))
         self.fileNum = 0
         self.nStackNum = 0
         self.rNum = 1
         self.url = ""
-        self.aBucket = ""
-        self.mName = ""
+        self.aBucket = aBucket
+        self.mName = mName
         self.now = time.localtime()
         self.today = str(self.now.tm_year)+"."+str(self.now.tm_mon)+"."+str(self.now.tm_mday)
         self.wb = xlwt.Workbook(encoding="utf-8")
@@ -36,15 +38,17 @@ class DownNAnalyze:
         self.ws.write(0,8,"Neutral")
         self.ws.write(0,9,"Sadness")
         self.ws.write(0,10,"Surprise")
+        
+    def __del__(self):
+        self.wait()
 
-
-    def Stop(self):
+    def stop(self):
         print("END")
         self.wb.save('uploader/'+str(self.today)+'.xls')
         dPath = str('uploader/'+str(self.today)+'.xls')
         wPath = 'uploader/Weather.xls'
         data = open('uploader/'+str(self.today)+'.xls','rb')
-        self.S3.put_object(ACL = 'public-read', Bucket = 'dgutest01', Key = self.today+'/['+self.today+'] Result For {0} Songs.xls'.format(self.nStackNum), Body = data)
+        self.S3.put_object(ACL = 'public-read', Bucket = self.aBucket, Key = self.today+'/['+self.today+'] Result For {0} Songs.xls'.format(self.nStackNum), Body = data)
         data.close()
         os.remove(dPath)
         try:
@@ -52,39 +56,43 @@ class DownNAnalyze:
         except WindowsError:
             pass
         
-        
-    def Start(self, aBucket, mName):
-        self.mName = mName
-        self.aBucket = aBucket
-        while(True):
-            self.fileNum = self.fileNum + 1
-            self.mName = unicode(self.mName)
-            key = str(self.today) + '/' + self.mName + '/' + str(self.fileNum)
-            print key
-            url = self.S3.generate_presigned_url(
-                ClientMethod='get_object',
-                Params={
-                    'Bucket': self.aBucket,
-                    'Key': key
-                }
-            )
-            temp = url.split('?')
-            url = temp[0]+'.jpg'
-            key = str(self.today) + '/' + self.mName + '/' + '{0}.jpg'.format(self.fileNum)
-            path = 'downloader/{0}.jpg'.format(self.fileNum)
+    def run(self):
+        fName = unicode(self.mName)
+        slash = fName.rfind('/')
+        wmv = fName.rfind('.wmv')
+        fName = fName[slash+1:wmv]
+        for i in range(0, 10):
+            try:
+                self.fileNum = i
+                self.fileNum = self.fileNum + 1
+                key = str(self.today) + '/' + fName + '/' + str(self.fileNum)
+                print key
             
-            try: 
+            
+                url = self.S3.generate_presigned_url(
+                    ClientMethod='get_object',
+                    Params={
+                        'Bucket': self.aBucket,
+                        'Key': key
+                    }
+                )
+                temp = url.split('?')
+                url = temp[0]+'.jpg'
+                key = str(self.today) + '/' + fName + '/' + '{0}.jpg'.format(self.fileNum)
+                path = 'downloader/{0}.jpg'.format(self.fileNum)
+             
                 self.S3.download_file(self.aBucket, key, path)
-                self.RekognitionAPI(self.mName, key, url)
-                os.remove(path)
-            
+                
+                try:
+                    self.RekognitionAPI(fName, key, url)
+                    os.remove(path)
+                    
+                    print("SUCCESS")
+                except Exception as e:
+                    print ("RECOGNITION UNAVAILABLE")
             except Exception as e:
-                print("ERROR")
-                self.fileNum = 0
-                break
-
-        self.Stop()
-
+                print("DOWNLOAD UNAVAILABLE")
+            
         
     def RekognitionAPI(self, fName, key, url, attributes=['ALL'], region="us-east-1"):
         Rekog = boto3.client("rekognition", region)
@@ -182,6 +190,5 @@ class DownNAnalyze:
         self.ws.write(self.rNum, 10, eList[7])
         
         self.rNum = self.rNum + 1
-        self.nStackNum = self.nStackNum + 1
 
         
