@@ -19,7 +19,6 @@ class CapNUp(QThread):
     fileNum = 0
 
     def __init__(self, video, fileName):
-        print("IN THREAD")
         QThread.__init__(self)        
         self.S3 = boto3.client('s3', config = Config(signature_version = 's3v4'))
         self.video = video
