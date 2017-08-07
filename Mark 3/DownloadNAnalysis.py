@@ -4,16 +4,18 @@ Created on 2017. 6. 7.
 
 @author: DJ
 '''
+# -*- coding: utf-8 -*-
 import boto3
 import httplib, urllib
 import xlwt
 import os, time
 
+from pyowm import OWM
 from botocore.client import Config
 from PyQt4.QtCore import QThread
 
 class DownNAnalyze(QThread):
-    tFlag = False
+    API_key = '1f5aaef161771efd6c64b08553f03a31'
     
     def __init__(self, aBucket, mName):
         QThread.__init__(self)
@@ -26,6 +28,9 @@ class DownNAnalyze(QThread):
         self.mName = mName
         self.now = time.localtime()
         self.today = str(self.now.tm_year)+"."+str(self.now.tm_mon)+"."+str(self.now.tm_mday)
+        self.month = str(self.now.tm_mon)
+        self.time = str(self.now.tm_hour)+":"+str(self.now.tm_min) 
+        
         self.wb = xlwt.Workbook(encoding="utf-8")
         self.ws = self.wb.add_sheet(self.today)
         self.ws.write(0,1,"Gender")
@@ -38,6 +43,15 @@ class DownNAnalyze(QThread):
         self.ws.write(0,8,"Neutral")
         self.ws.write(0,9,"Sadness")
         self.ws.write(0,10,"Surprise")
+        self.ws.write(0,11,"month")
+        self.ws.write(0,12,"time")
+        self.ws.write(0,13,"Status")
+        self.ws.write(0,14,'Temperature')
+        self.ws.write(0,15,'Humidity')
+        
+        self.status=""
+        self.temperature=""
+        self.humidity=""
         
     def __del__(self):
         self.wait()
@@ -46,15 +60,10 @@ class DownNAnalyze(QThread):
         print("END")
         self.wb.save('uploader/'+str(self.today)+'.xls')
         dPath = str('uploader/'+str(self.today)+'.xls')
-        wPath = 'uploader/Weather.xls'
         data = open('uploader/'+str(self.today)+'.xls','rb')
         self.S3.put_object(ACL = 'public-read', Bucket = self.aBucket, Key = self.today+'/['+self.today+'] Result For {0} Songs.xls'.format(self.nStackNum), Body = data)
         data.close()
         os.remove(dPath)
-        try:
-            os.remove(wPath)
-        except WindowsError:
-            pass
         
     def run(self):
         fName = unicode(self.mName)
@@ -105,7 +114,7 @@ class DownNAnalyze(QThread):
             },
             Attributes=attributes,
         )
-    
+        self.WeatherAPI() #날씨 한 번 받아옴.
         for result in eResponse['FaceDetails']:
             if result['Sunglasses']['Value'] ==  True or result['Confidence'] < 90 :
                 break
@@ -188,7 +197,22 @@ class DownNAnalyze(QThread):
         self.ws.write(self.rNum, 8, eList[5])
         self.ws.write(self.rNum, 9, eList[6])
         self.ws.write(self.rNum, 10, eList[7])
+        self.ws.write(self.rNum, 11,self.month)
+        self.ws.write(self.rNum, 12,self.time)
+        self.ws.write(self.rNum, 13,self.status)
+        self.ws.write(self.rNum, 14,self.temperature)
+        self.ws.write(self.rNum, 15,self.humidity)
         
         self.rNum = self.rNum + 1
+
+    
+    def WeatherAPI(self):
+        owm = OWM(self.API_key)
+        obs = owm.weather_at_coords(37.566553, 126.977909)
+        w = obs.get_weather()
+            
+        self.status = w.get_status()
+        self.temperature =  w.get_temperature(unit='celsius')['temp']
+        self.humidity = w.get_humidity()
 
         
