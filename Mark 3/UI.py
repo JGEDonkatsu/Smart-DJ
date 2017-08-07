@@ -11,6 +11,7 @@ from PyQt4 import phonon
 from PyQt4.phonon import Phonon
 from CaptureNUpload import CapNUp
 from CaptureNUpload2 import CapNUp2
+from DownloadNAnalysis import DownNAnalyze
 from Weather import WeatherAPI
 
 try:
@@ -20,7 +21,6 @@ except AttributeError:
 
 class Ui_MainWindow(QtGui.QMainWindow):
     fName = "" # Music Name
-    mArray = []
     vThreadVideo01 = cv2.VideoCapture(0)
     vThreadVideo01.set(cv2.CAP_PROP_FRAME_WIDTH,1920)
     vThreadVideo01.set(cv2.CAP_PROP_FRAME_HEIGHT,1080)
@@ -32,6 +32,12 @@ class Ui_MainWindow(QtGui.QMainWindow):
     vThread01 = CapNUp(vThreadVideo01, fName)
     vThread02 = CapNUp2(vThreadVideo02, fName)
     
+    aThread01 = DownNAnalyze('dgutest01', fName)
+    aThread02 = DownNAnalyze('dgutest02', fName)
+
+    LThread01 = DownNAnalyze('dgutest01', '/LAST.wmv')
+    LThread02 = DownNAnalyze('dgutest02', '/LAST.wmv')
+        
     wThread = WeatherAPI()
     
     def __init__(self):
@@ -126,7 +132,7 @@ class Ui_MainWindow(QtGui.QMainWindow):
         self.wThread.run()
         self.vThread01.start()
         self.vThread02.start()
-        self.mArray.append(self.fName)
+        
         
         
     def metaStateChanged(self, newState, oldState):
@@ -187,15 +193,17 @@ class Ui_MainWindow(QtGui.QMainWindow):
                 self.MusicList.setColumnWidth(0, 300)
     
     def aboutToFinish(self):
+        aThread01 = DownNAnalyze('dgutest01', self.fName)
+        aThread02 = DownNAnalyze('dgutest02', self.fName)
         index = self.sources.index(self.mediaObject.currentSource()) + 1
-        print index
+        aThread01.start()
+        aThread02.start()
         if index == len(self.sources):
             self.fName = "/LAST.wmv"
             self.vThread01 = CapNUp(self.vThreadVideo01, self.fName) # Insert Music Name In Thread
             self.vThread01.start()
             self.vThread02 = CapNUp2(self.vThreadVideo02, self.fName) # Insert Music Name In Thread
             self.vThread02.start()
-            
             
         if len(self.sources) > index:
             self.mediaObject.enqueue(self.sources[index])
