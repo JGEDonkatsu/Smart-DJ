@@ -12,7 +12,6 @@ from PyQt4.phonon import Phonon
 from CaptureNUpload import CapNUp
 from CaptureNUpload2 import CapNUp2
 from DownloadNAnalysis import DownNAnalyze
-from Weather import WeatherAPI
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -37,8 +36,7 @@ class Ui_MainWindow(QtGui.QMainWindow):
 
     LThread01 = DownNAnalyze('dgutest01', '/LAST.wmv')
     LThread02 = DownNAnalyze('dgutest02', '/LAST.wmv')
-        
-    wThread = WeatherAPI()
+    
     
     def __init__(self):
         super(QtGui.QMainWindow, self).__init__()
