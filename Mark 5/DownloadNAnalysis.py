@@ -106,7 +106,6 @@ class DownNAnalyze(QThread):
                         try:
                             self.RekognitionAPI(self.fName, key, url)
                             os.remove(path)
-                            
                             print("SUCCESS")
                         except Exception as e:
                             print ("RECOGNITION UNAVAILABLE")
@@ -160,7 +159,7 @@ class DownNAnalyze(QThread):
         headers = {
             # Key Input Area
             'Content-Type': 'application/json',
-            'Ocp-Apim-Subscription-Key': 'd114f2dad42e4fcb9483b9a22de4ff87',
+            'Ocp-Apim-Subscription-Key': '860000bba8cb4f55be0944b5ae3f52c6',
         }
         
         params = urllib.urlencode({
