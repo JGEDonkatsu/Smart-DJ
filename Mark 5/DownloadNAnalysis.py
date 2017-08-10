@@ -13,25 +13,27 @@ import os, time
 from botocore.client import Config
 from PyQt4.QtCore import QThread
 from UI import Ui_MainWindow
+
 from pyowm import OWM
 
 class DownNAnalyze(QThread):
     tFlag = False
     API_key = '1f5aaef161771efd6c64b08553f03a31'
     
-    def __init__(self, aBucket):
+    def __init__(self, aBucket, Key):
         QThread.__init__(self)
         self.S3 = boto3.client('s3', config = Config(signature_version = 's3v4'))
         self.fileNum = 0
         self.mLength = 0
         self.mArray = []
+        self.aKey = Key
         self.fName = ""
         self.fCounter = 0
         self.rNum = 1
         self.url = ""
+        self.k = 1
         self.aBucket = aBucket
-        self.now = time.localtime()
-        self.today = str(self.now.tm_year)+"."+str(self.now.tm_mon)+"."+str(self.now.tm_mday)
+        self.today = str(time.localtime().tm_year)+"."+str(time.localtime().tm_mon)+"."+str(time.localtime().tm_mday)
         
         self.wb = xlwt.Workbook(encoding="utf-8")
         self.ws = self.wb.add_sheet(self.today)
@@ -80,8 +82,8 @@ class DownNAnalyze(QThread):
                 slash = self.fName.rfind('/')
                 wmv = self.fName.rfind('.wmv')
                 self.fName = self.fName[slash+1:wmv]
-                time.sleep(10)
-                for j in range(0, 20):
+                time.sleep(20)
+                for j in range(0, 50):
                     try:
                         self.fileNum = j
                         self.fileNum = self.fileNum + 1
@@ -100,7 +102,6 @@ class DownNAnalyze(QThread):
                         url = temp[0]+'.jpg'
                         key = str(self.today) + '/' + self.fName + '/' + '{0}.jpg'.format(self.fileNum)
                         path = 'downloader/{0}.jpg'.format(self.fileNum)
-                     
                         self.S3.download_file(self.aBucket, key, path)
                         
                         try:
@@ -108,17 +109,19 @@ class DownNAnalyze(QThread):
                             os.remove(path)
                             print("SUCCESS")
                         except Exception as e:
+                            self.S3.delete_object(Bucket = self.aBucket, Key = key)
                             print ("RECOGNITION UNAVAILABLE")
                     except Exception as e:
                         print("DOWNLOAD UNAVAILABLE")
-                
-                self.S3.delete_object(Bucket = self.aBucket, Key =  str(self.today) + '/' + self.fName + '/Weather.xls')
+
 
                 if (self.fCounter == len(self.mArray)):
                     break
                 else:
                     self.fCounter = self.fCounter + 1
-                
+                key = str(self.today) + '/' + self.fName
+                self.S3.delete_object(Bucket = self.aBucket, Key = key)
+
                 
     def RekognitionAPI(self, fName, key, url, attributes=['ALL'], region="us-east-1"):
         Rekog = boto3.client("rekognition", region)
@@ -159,7 +162,7 @@ class DownNAnalyze(QThread):
         headers = {
             # Key Input Area
             'Content-Type': 'application/json',
-            'Ocp-Apim-Subscription-Key': '860000bba8cb4f55be0944b5ae3f52c6',
+            'Ocp-Apim-Subscription-Key': self.aKey,
         }
         
         params = urllib.urlencode({
@@ -197,7 +200,6 @@ class DownNAnalyze(QThread):
             # After Manipulation Process
             eList = [anger, contempt, disgust, fear, happiness, neutral, sadness, surprise]
             if neutral != "":
-                #print [eList]
                 return eList
 
         except:
@@ -207,7 +209,7 @@ class DownNAnalyze(QThread):
     def Excelization(self, fName, eGen, eAge, eList):
         print eGen, eAge, eList
         
-        time = str(self.now.tm_hour)+':'+str(self.now.tm_min)
+        time = str(time.localtime().tm_hour)+":"+str(time.localtime().tm_min)
         owm = OWM(self.API_key)
         obs = owm.weather_at_coords(37.566553, 126.977909)
         w = obs.get_weather()
